@@ -95,6 +95,12 @@ extern "C" {
 #define DRM
 #define DRM_PS
 #endif
+/* Allow decoding of HDC */
+#ifdef HDC_SUPPORT
+#define DRM
+#define DRM_PS
+#define HDC
+#endif
 
 /* LD can't do without LTP */
 #ifdef LD_DEC

@@ -43,6 +43,7 @@ extern "C" {
 #define NUM_OF_LINKS             3
 #define NUM_OF_QMF_CHANNELS     64
 #define NUM_OF_SUBSAMPLES       30
+#define NUM_OF_HDC_SUBSAMPLES   32
 #define MAX_SA_BAND             46
 #define MAX_PAN_BAND            64
 #define MAX_DELAY                5
@@ -75,7 +76,7 @@ typedef struct
 
     uint8_t delay_buf_index_ser[NUM_OF_LINKS];
 
-    qmf_t SA[NUM_OF_SUBSAMPLES][MAX_SA_BAND];
+    qmf_t SA[NUM_OF_HDC_SUBSAMPLES][MAX_SA_BAND];
 
     complex_t d_buff[2][MAX_SA_BAND];
     complex_t d2_buff[NUM_OF_LINKS][MAX_DELAY][MAX_SA_BAND];
@@ -91,7 +92,7 @@ uint16_t drm_ps_data(drm_ps_info *ps, bitfile *ld);
 drm_ps_info *drm_ps_init(void);
 void drm_ps_free(drm_ps_info *ps);
 
-uint8_t drm_ps_decode(drm_ps_info *ps, uint8_t guess, qmf_t X_left[38][64], qmf_t X_right[38][64]);
+uint8_t drm_ps_decode(drm_ps_info *ps, uint8_t guess, qmf_t X_left[38][64], qmf_t X_right[38][64], uint8_t hdc_sdr);
 
 #ifdef __cplusplus
 }

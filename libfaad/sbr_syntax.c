@@ -153,7 +153,11 @@ uint8_t sbr_extension_data(bitfile *ld, sbr_info *sbr, uint16_t cnt,
 #endif
 
 #ifdef DRM
+#ifdef HDC
+    if (!sbr->Is_DRM_SBR && !sbr->Is_HDC_SBR)
+#else
     if (!sbr->Is_DRM_SBR)
+#endif
 #endif
     {
         uint8_t bs_extension_type = (uint8_t)faad_getbits(ld, 4
@@ -246,7 +250,11 @@ uint8_t sbr_extension_data(bitfile *ld, sbr_info *sbr, uint16_t cnt,
     }
 
 #ifdef DRM
+#ifdef HDC
+    if (!sbr->Is_DRM_SBR && !sbr->Is_HDC_SBR)
+#else
     if (!sbr->Is_DRM_SBR)
+#endif
 #endif
     {
         /* -4 does not apply, bs_extension_type is re-read in this function */
@@ -387,6 +395,12 @@ static uint8_t sbr_single_channel_element(bitfile *ld, sbr_info *sbr)
 #ifdef DRM
     /* bs_coupling, from sbr_channel_pair_base_element(bs_amp_res) */
     if (sbr->Is_DRM_SBR)
+    {
+        faad_get1bit(ld);
+    }
+#endif
+#ifdef HDC
+    if (sbr->Is_HDC_SBR)
     {
         faad_get1bit(ld);
     }
@@ -888,7 +902,11 @@ static uint16_t sbr_extension(bitfile *ld, sbr_info *sbr,
 #ifdef DRM_PS
     case DRM_PARAMETRIC_STEREO:
         /* If not expected then only decode but do not expose. */
+#ifdef HDC
+        if (sbr->Is_DRM_SBR || sbr->Is_HDC_SBR)
+#else
         if (sbr->Is_DRM_SBR)
+#endif
         {
             sbr->ps_used = 1;
         }
@@ -899,9 +917,9 @@ static uint16_t sbr_extension(bitfile *ld, sbr_info *sbr,
         return drm_ps_data(sbr->drm_ps, ld);
 #endif
     default:
-        sbr->bs_extension_data = (uint8_t)faad_getbits(ld, 6
-            DEBUGVAR(1,279,"sbr_single_channel_element(): bs_extension_data"));
-        return 6;
+        sbr->bs_extension_data = (uint8_t)faad_getbits(ld, num_bits_left
+             DEBUGVAR(1,279,"sbr_single_channel_element(): bs_extension_data"));
+        return num_bits_left;
     }
 }
 

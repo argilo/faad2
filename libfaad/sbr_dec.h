@@ -176,6 +176,10 @@ typedef struct
     ps_info *ps;
 #endif
 
+#ifdef HDC
+    uint8_t Is_HDC_SBR;
+#endif
+
     uint8_t numTimeSlotsRate;
     uint8_t numTimeSlots;
     uint8_t tHFGen;

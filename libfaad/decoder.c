@@ -350,6 +350,13 @@ long NeAACDecInit(NeAACDecHandle hpDecoder,
     if (!*samplerate)
         return -1;
 
+#ifdef HDC
+    if (hDecoder->config.defObjectType == HDC_LC)
+    {
+        hDecoder->object_type = hDecoder->config.defObjectType;
+    }
+#endif
+
 #if (defined(PS_DEC) || defined(DRM_PS))
     /* check if we have a mono file */
     if (*channels == 1)
@@ -525,6 +532,41 @@ char NeAACDecInitDRM(NeAACDecHandle *hpDecoder,
 
     (*hDecoder)->fb = filter_bank_init((*hDecoder)->frameLength);
 
+    return 0;
+}
+#endif
+
+#ifdef HDC
+char NeAACDecInitHDC(NeAACDecHandle *hpDecoder,
+                                 unsigned long *samplerate)
+{
+    NeAACDecStruct** hDecoder = (NeAACDecStruct**)hpDecoder;
+    if (hDecoder == NULL)
+        return 1; /* error */
+
+    NeAACDecClose(*hDecoder);
+
+    *hDecoder = NeAACDecOpen();
+
+    /* Special object type defined for HDC */
+    (*hDecoder)->config.defObjectType = HDC_LC;
+
+    (*hDecoder)->config.defSampleRate = *samplerate;
+#ifdef ERROR_RESILIENCE
+    (*hDecoder)->aacSectionDataResilienceFlag = 0;
+    (*hDecoder)->aacScalefactorDataResilienceFlag = 0;
+    (*hDecoder)->aacSpectralDataResilienceFlag = 0;
+#endif
+    (*hDecoder)->frameLength = 1024;
+    (*hDecoder)->sf_index = get_sr_index((*hDecoder)->config.defSampleRate);
+    (*hDecoder)->object_type = (*hDecoder)->config.defObjectType;
+
+    (*hDecoder)->channelConfiguration = 2;
+
+    *samplerate *= 2;
+    (*hDecoder)->forceUpSampling = 1;
+
+    (*hDecoder)->fb = filter_bank_init((*hDecoder)->frameLength);
     return 0;
 }
 #endif

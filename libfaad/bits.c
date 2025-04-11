@@ -244,7 +244,7 @@ uint8_t *faad_getbitbuffer(bitfile *ld, uint32_t bits
     return buffer;
 }
 
-#ifdef DRM
+#if defined(DRM) || defined(HDC)
 /* return the original data buffer */
 void *faad_origbitbuffer(bitfile *ld)
 {

@@ -1164,7 +1164,8 @@ static int faad_main(int argc, char *argv[])
                     if ((val != LC) &&
                         (val != MAIN) &&
                         (val != LTP) &&
-                        (val != LD))
+                        (val != LD) &&
+                        (val != HDC_LC))
                     {
                         showHelp = 1;
                     }

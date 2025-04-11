@@ -46,6 +46,7 @@ extern "C" {
 #define ER_LC     17
 #define ER_LTP    19
 #define DRM_ER_LC 27 /* special object type for DRM */
+#define HDC_LC    127 /* special object type for HDC */
 
 /* header types */
 #define RAW        0

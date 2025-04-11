@@ -146,7 +146,7 @@ endif()  # GCC
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/include/neaacdec.h
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-foreach(LIB faad faad_drm faad_fixed faad_drm_fixed)
+foreach(LIB faad faad_drm faad_hdc faad_fixed faad_drm_fixed)
   add_library(${LIB} ${LIBFAAD_SOURCES})
   if(MATH_LIBRARY)
     target_link_libraries(${LIB} PUBLIC ${MATH_LIBRARY})
@@ -169,6 +169,12 @@ foreach(LIB faad_drm faad_drm_fixed)
 target_compile_definitions(${LIB} PRIVATE
   DRM_SUPPORT
 )
+endforeach()
+
+foreach(LIB faad_hdc)
+  target_compile_definitions(${LIB} PRIVATE
+          HDC_SUPPORT
+  )
 endforeach()
 
 foreach(LIB faad_fixed faad_drm_fixed)
@@ -271,7 +277,7 @@ if(NOT FAAD_BUNDLED_MODE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/faad2.pc"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
-  set(INSTALL_TARGETS faad faad_drm)
+  set(INSTALL_TARGETS faad faad_drm faad_hdc)
   if (FAAD_BUILD_CLI)
     list(APPEND INSTALL_TARGETS faad_cli)
   endif()

@@ -81,6 +81,7 @@ extern "C" {
 #define ER_LTP    19
 #define LD        23
 #define DRM_ER_LC 27 /* special object type for DRM */
+#define HDC_LC    127 /* non standard type for HDC */
 
 /* header types */
 #define RAW        0
@@ -226,6 +227,9 @@ NEAACDECAPI char NeAACDecInit2(NeAACDecHandle hDecoder,
 /* Init the library for DRM */
 NEAACDECAPI char NeAACDecInitDRM(NeAACDecHandle *hDecoder, unsigned long samplerate,
                                  unsigned char channels);
+
+/* Init the library for HDC */
+NEAACDECAPI char NeAACDecInitHDC(NeAACDecHandle *hDecoder, unsigned long *samplerate);
 
 NEAACDECAPI void NeAACDecPostSeekReset(NeAACDecHandle hDecoder, long frame);
 

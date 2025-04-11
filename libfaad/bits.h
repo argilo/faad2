@@ -87,7 +87,7 @@ void faad_rewindbits(bitfile *ld);
 void faad_resetbits(bitfile *ld, uint32_t bits);
 uint8_t *faad_getbitbuffer(bitfile *ld, uint32_t bits
                        DEBUGDEC);
-#ifdef DRM
+#if defined(DRM) || defined(HDC)
 void *faad_origbitbuffer(bitfile *ld);
 uint32_t faad_origbitbuffer_size(bitfile *ld);
 #endif

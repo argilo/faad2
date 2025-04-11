@@ -166,6 +166,11 @@ int8_t can_decode_ot(const uint8_t object_type)
         return -1;
 #endif
 #endif
+
+#ifdef HDC
+    case HDC_LC:
+        return 0;
+#endif
     }
 
     return -1;

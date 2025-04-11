@@ -44,6 +44,9 @@
 #define DECAY_CUTOFF         3
 #define DECAY_SLOPE          0.05f
 
+/* macros */
+#define IS_HDC(num_subsamples) ((num_subsamples) == 32)
+
 /* type definitaions */
 typedef const int8_t (*drm_ps_huff_tab)[2];
 
@@ -223,6 +226,30 @@ static const real_t pan_pow_2_30_neg[8][5] = {
     { COEF_CONST(0.980994305), COEF_CONST(0.969764715), COEF_CONST(0.951333663), COEF_CONST(0.933255062), COEF_CONST(0.922571949) },
     { COEF_CONST(0.977236734), COEF_CONST(0.958663671), COEF_CONST(0.936843519), COEF_CONST(0.915517901), COEF_CONST(0.898117847) },
     { COEF_CONST(0.969764715), COEF_CONST(0.947691892), COEF_CONST(0.922571949), COEF_CONST(0.898117847), COEF_CONST(0.874311936) }
+};
+
+/* 2^(pan_quant[x][y]/32) */
+static const real_t pan_pow_2_32_pos[8][5] = {
+    { COEF_CONST(1),           COEF_CONST(1),           COEF_CONST(1),           COEF_CONST(1),           COEF_CONST(1)           },
+    { COEF_CONST(1.003604347), COEF_CONST(1.003604347), COEF_CONST(1.007221686), COEF_CONST(1.007221686), COEF_CONST(1.007221686) },
+    { COEF_CONST(1.007221686), COEF_CONST(1.007221686), COEF_CONST(1.014495524), COEF_CONST(1.018152118), COEF_CONST(1.018152118) },
+    { COEF_CONST(1.010852062), COEF_CONST(1.014495524), COEF_CONST(1.021821892), COEF_CONST(1.032910767), COEF_CONST(1.036633736) },
+    { COEF_CONST(1.014495524), COEF_CONST(1.021821892), COEF_CONST(1.032910767), COEF_CONST(1.04788335),  COEF_CONST(1.055448548) },
+    { COEF_CONST(1.018152118), COEF_CONST(1.029201168), COEF_CONST(1.04788335),  COEF_CONST(1.066902341), COEF_CONST(1.078480432) },
+    { COEF_CONST(1.021821892), COEF_CONST(1.040370124), COEF_CONST(1.063070665), COEF_CONST(1.086268878), COEF_CONST(1.105986959) },
+    { COEF_CONST(1.029201168), COEF_CONST(1.051658007), COEF_CONST(1.078480432), COEF_CONST(1.105986959), COEF_CONST(1.134195038) }
+};
+
+/* 2^(-pan_quant[x][y]/32) */
+static const real_t pan_pow_2_32_neg[8][5] = {
+    { COEF_CONST(1),           COEF_CONST(1),           COEF_CONST(1),           COEF_CONST(1),           COEF_CONST(1)           },
+    { COEF_CONST(0.996408597), COEF_CONST(0.996408597), COEF_CONST(0.992830093), COEF_CONST(0.992830093), COEF_CONST(0.992830093) },
+    { COEF_CONST(0.992830093), COEF_CONST(0.992830093), COEF_CONST(0.985711594), COEF_CONST(0.982171507), COEF_CONST(0.982171507) },
+    { COEF_CONST(0.989264441), COEF_CONST(0.985711594), COEF_CONST(0.978644134), COEF_CONST(0.968137841), COEF_CONST(0.964660869) },
+    { COEF_CONST(0.985711594), COEF_CONST(0.978644134), COEF_CONST(0.968137841), COEF_CONST(0.954304695), COEF_CONST(0.947464471) },
+    { COEF_CONST(0.982171507), COEF_CONST(0.971627346), COEF_CONST(0.954304695), COEF_CONST(0.93729291),  COEF_CONST(0.927230546) },
+    { COEF_CONST(0.978644134), COEF_CONST(0.961196383), COEF_CONST(0.940671239), COEF_CONST(0.92058239),  COEF_CONST(0.904169793) },
+    { COEF_CONST(0.971627346), COEF_CONST(0.950879462), COEF_CONST(0.927230546), COEF_CONST(0.904169793), COEF_CONST(0.881682573) }
 };
 
 static const real_t g_decayslope[MAX_SA_BAND] = {
@@ -635,7 +662,7 @@ static void drm_ps_delta_decode(drm_ps_info *ps)
     }
 }
 
-static void drm_calc_sa_side_signal(drm_ps_info *ps, qmf_t X[38][64])
+static void drm_calc_sa_side_signal(drm_ps_info *ps, qmf_t X[38][64], int num_subsamples)
 {
     uint8_t s, b, k;
     complex_t qfrac, tmp0, tmp, in, R0;
@@ -659,7 +686,7 @@ static void drm_calc_sa_side_signal(drm_ps_info *ps, qmf_t X[38][64])
         RE(Phi_Fract) = RE(Phi_Fract_Qmf[b]);
         IM(Phi_Fract) = IM(Phi_Fract_Qmf[b]);
 
-        for (s = 0; s < NUM_OF_SUBSAMPLES; s++)
+        for (s = 0; s < num_subsamples; s++)
         {
             const real_t gamma = REAL_CONST(1.5);
             const real_t sigma = REAL_CONST(1.5625);
@@ -750,11 +777,13 @@ static void drm_calc_sa_side_signal(drm_ps_info *ps, qmf_t X[38][64])
         ps->delay_buf_index_ser[k] = temp_delay_ser[k];
 }
 
-static void drm_add_ambiance(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_right[38][64])
+static void drm_add_ambiance(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_right[38][64], int num_subsamples)
 {
-    uint8_t s, b, ifreq, qclass;
+    uint8_t s, b, ifreq, qclass, is_hdc;
     real_t sa_map[MAX_SA_BAND], sa_dir_map[MAX_SA_BAND], k_sa_map[MAX_SA_BAND], k_sa_dir_map[MAX_SA_BAND];
     real_t new_dir_map, new_sa_map;
+
+    is_hdc = IS_HDC(num_subsamples);
 
     if (ps->bs_enable_sa)
     {
@@ -762,7 +791,7 @@ static void drm_add_ambiance(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_righ
            to look up all the values we need */
         for (b = 0; b < sa_freq_scale[DRM_NUM_SA_BANDS]; b++)
         {
-            const real_t inv_f_num_of_subsamples = FRAC_CONST(0.03333333333);
+            const real_t inv_f_num_of_subsamples = is_hdc ? FRAC_CONST(0.03125) : FRAC_CONST(0.03333333333);
 
             ifreq = sa_inv_freq[b];
             qclass = (b != 0);
@@ -779,7 +808,7 @@ static void drm_add_ambiance(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_righ
 
         }
 
-        for (s = 0; s < NUM_OF_SUBSAMPLES; s++)
+        for (s = 0; s < num_subsamples; s++)
         {
             for (b = 0; b < sa_freq_scale[DRM_NUM_SA_BANDS]; b++)
             {
@@ -799,7 +828,7 @@ static void drm_add_ambiance(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_righ
         }
     }
     else {
-        for (s = 0; s < NUM_OF_SUBSAMPLES; s++)
+        for (s = 0; s < num_subsamples; s++)
         {
             for (b = 0; b < NUM_OF_QMF_CHANNELS; b++)
             {
@@ -810,13 +839,15 @@ static void drm_add_ambiance(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_righ
     }
 }
 
-static void drm_add_pan(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_right[38][64])
+static void drm_add_pan(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_right[38][64], int num_subsamples)
 {
-    uint8_t s, b, qclass, ifreq;
+    uint8_t s, b, qclass, ifreq, is_hdc;
     real_t tmp, coeff1, coeff2;
     real_t pan_base[MAX_PAN_BAND];
     real_t pan_delta[MAX_PAN_BAND];
     qmf_t temp_l, temp_r;
+
+    is_hdc = IS_HDC(num_subsamples);
 
     if (ps->bs_enable_pan)
     {
@@ -834,31 +865,56 @@ static void drm_add_pan(drm_ps_info *ps, qmf_t X_left[38][64], qmf_t X_right[38]
                 pan_base[b] = pan_pow_2_neg[-ps->g_prev_pan_index[ifreq]][qclass];
             }
 
-            /* 2^((a-b)/30) = 2^(a/30) * 1/(2^(b/30)) */
+            /* 2^((a-b)/32) = 2^(a/32) * 1/(2^(b/32)) if HDC */
+            /* 2^((a-b)/30) = 2^(a/30) * 1/(2^(b/30)) if regular DRM */
             /* a en b can be negative so we may need to inverse parts */
             if (ps->g_pan_index[ifreq] >= 0)
             {
                 if (ps->g_prev_pan_index[ifreq] >= 0)
                 {
-                    pan_delta[b] = MUL_C(pan_pow_2_30_pos[ps->g_pan_index[ifreq]][qclass],
-                                         pan_pow_2_30_neg[ps->g_prev_pan_index[ifreq]][qclass]);
+                    if (is_hdc)
+                    {
+                        pan_delta[b] = MUL_C(pan_pow_2_32_pos[ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_32_neg[ps->g_prev_pan_index[ifreq]][qclass]);
+                    } else {
+                        pan_delta[b] = MUL_C(pan_pow_2_30_pos[ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_30_neg[ps->g_prev_pan_index[ifreq]][qclass]);
+                    }
                 } else {
-                    pan_delta[b] = MUL_C(pan_pow_2_30_pos[ps->g_pan_index[ifreq]][qclass],
-                                         pan_pow_2_30_pos[-ps->g_prev_pan_index[ifreq]][qclass]);
+                    if (is_hdc)
+                    {
+                        pan_delta[b] = MUL_C(pan_pow_2_32_pos[ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_32_pos[-ps->g_prev_pan_index[ifreq]][qclass]);
+                    } else {
+                        pan_delta[b] = MUL_C(pan_pow_2_30_pos[ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_30_pos[-ps->g_prev_pan_index[ifreq]][qclass]);
+                    }
                 }
             } else {
                 if (ps->g_prev_pan_index[ifreq] >= 0)
                 {
-                    pan_delta[b] = MUL_C(pan_pow_2_30_neg[-ps->g_pan_index[ifreq]][qclass],
-                                         pan_pow_2_30_neg[ps->g_prev_pan_index[ifreq]][qclass]);
+                    if (is_hdc)
+                    {
+                        pan_delta[b] = MUL_C(pan_pow_2_32_neg[-ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_32_neg[ps->g_prev_pan_index[ifreq]][qclass]);
+                    } else {
+                        pan_delta[b] = MUL_C(pan_pow_2_30_neg[-ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_30_neg[ps->g_prev_pan_index[ifreq]][qclass]);
+                    }
                 } else {
-                    pan_delta[b] = MUL_C(pan_pow_2_30_neg[-ps->g_pan_index[ifreq]][qclass],
-                                         pan_pow_2_30_pos[-ps->g_prev_pan_index[ifreq]][qclass]);
+                    if (is_hdc)
+                    {
+                        pan_delta[b] = MUL_C(pan_pow_2_32_neg[-ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_32_pos[-ps->g_prev_pan_index[ifreq]][qclass]);
+                    } else {
+                        pan_delta[b] = MUL_C(pan_pow_2_30_neg[-ps->g_pan_index[ifreq]][qclass],
+                                             pan_pow_2_30_pos[-ps->g_prev_pan_index[ifreq]][qclass]);
+                    }
                 }
             }
         }
 
-        for (s = 0; s < NUM_OF_SUBSAMPLES; s++)
+        for (s = 0; s < num_subsamples; s++)
         {
             /* PAN always uses all 64 channels */
             for (b = 0; b < NUM_OF_QMF_CHANNELS; b++)
@@ -901,17 +957,19 @@ void drm_ps_free(drm_ps_info *ps)
 }
 
 /* main DRM PS decoding function */
-uint8_t drm_ps_decode(drm_ps_info *ps, uint8_t guess, qmf_t X_left[38][64], qmf_t X_right[38][64])
+uint8_t drm_ps_decode(drm_ps_info *ps, uint8_t guess, qmf_t X_left[38][64], qmf_t X_right[38][64], uint8_t hdc_sbr)
 {
+    int num_subsamples = hdc_sbr ? NUM_OF_HDC_SUBSAMPLES : NUM_OF_SUBSAMPLES;
+
     if (ps == NULL)
     {
-        memcpy(X_right, X_left, sizeof(qmf_t)*30*64);
+        memcpy(X_right, X_left, sizeof(qmf_t)*num_subsamples*64);
         return 0;
     }
 
     if (!ps->drm_ps_data_available && !guess)
     {
-        memcpy(X_right, X_left, sizeof(qmf_t)*30*64);
+        memcpy(X_right, X_left, sizeof(qmf_t)*num_subsamples*64);
         memset(ps->g_prev_sa_index, 0, sizeof(ps->g_prev_sa_index));
         memset(ps->g_prev_pan_index, 0, sizeof(ps->g_prev_pan_index));
         return 0;
@@ -933,8 +991,8 @@ uint8_t drm_ps_decode(drm_ps_info *ps, uint8_t guess, qmf_t X_left[38][64], qmf_
 
     ps->drm_ps_data_available = 0;
 
-    drm_calc_sa_side_signal(ps, X_left);
-    drm_add_ambiance(ps, X_left, X_right);
+    drm_calc_sa_side_signal(ps, X_left, num_subsamples);
+    drm_add_ambiance(ps, X_left, X_right, num_subsamples);
 
     if (ps->bs_enable_sa)
     {
@@ -948,7 +1006,7 @@ uint8_t drm_ps_decode(drm_ps_info *ps, uint8_t guess, qmf_t X_left[38][64], qmf_
 
     if (ps->bs_enable_pan)
     {
-        drm_add_pan(ps, X_left, X_right);
+        drm_add_pan(ps, X_left, X_right, num_subsamples);
 
         ps->g_last_had_pan = 1;
 
